@@ -87,6 +87,7 @@ class SpinDimer:
             Hext += np.tensordot(h_ext, np.tensordot(g, Sarray, axes=[1, 0]), axes=[0, 0])
             
         return Hext
+    
 
 # hard-coded Hamiltonians and external fields (bad idea!)
 
