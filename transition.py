@@ -4,7 +4,7 @@ from scipy.linalg import eigh
 def transition_matrix(H, Hext):
     vals, vects = eigh(H)
     m = np.abs(np.conj(np.transpose(vects)) @ Hext @ vects) 
-    return m
+    return m, vals
 
 def select_transitions(m, energies):
     """
@@ -76,7 +76,7 @@ def fill_connections(m, order = 2):
     are considered of order 2, and so on. The process is iterated untill all allowed transitions of 
     order 'order' are filled.
     """
-    order = (order > 1) * order + (order <= 1) * 1 # if order smaller that 1 make it 1
+    order = max(order, 1) # if order smaller that 1 make it 1
     
     m_alt = np.copy(optimize_transitions(m, order = order))
     for n in range(2, order + 1): # after one iteration we cover all second order processes, two iterations -> third order processes and so on

@@ -31,7 +31,7 @@ def external_field(h_ext, g):
     return Hext
 
 class _VOporphirin:
-    def __init__(A, g, h, S, I):
+    def __init__(self, A, g, h, S, I):
         self.A = A
         self.g = g
         self.h = h
@@ -42,18 +42,22 @@ class _VOporphirin:
         Sx = 1/2 * (Sp + Sm)
         Sy= -1j/2 * (Sp - Sm)
         self.Sarray = np.array([Sx, Sy, Sz])
+        
         Iz, Ip, Im, self.Ieye = spin.spin_operators(self.I, to_dense_array=True, dtype=complex)
         Ix = 1/2 * (Ip + Im)
         Iy= -1j/2 * (Ip - Im)
         self.Iarray = np.array([Ix, Iy, Iz])
         
+    @property
     def H(self):
         HS = np.tensordot(self.Iarray, np.tensordot(self.A, self.Sarray, axes=[1, 0]), axes=[0, 0])
-        HS += external_field(self, self.h)
+        print(HS.shape)
+        HS += self.external_field(self.h)
         return HS
     
     def external_field(self, h_ext):
         Hext = np.tensordot(h_ext, np.tensordot(self.g, self.Sarray, axes=[1, 0]), axes=[0, 0])
-        Hext = Ieye @ Hext
+        Hext = kron(self.Ieye, Hext)
+        print(Hext.shape)
         return Hext
     
