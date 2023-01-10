@@ -6,6 +6,10 @@ import spin
 # Classes for families of Hamiltonians (good idea!)
     
 class SpinMonomer:
+    """
+    Requires the Spin and the g-tensor
+    Can also take an intrinsic field, an anisotropy tensor and a shift in energy
+    """
     def __init__(self, S, g, h=None, A=None, shift=None):
         self.S = S
         self.g = g
@@ -36,6 +40,10 @@ class SpinMonomer:
         return Hext
 
 class SpinDimer:
+    """
+    Requires the Spin and the g-tensor of each monomer, also the interaction matrix between monomers
+    Can also take the intrinsic field and anisotropy tensor of each monomer, also a shift in energy
+    """
     def __init__(self, Ss, gs, J, hs=None, As=None, shift=None):
         self.Ss = Ss
         self.gs = gs
@@ -80,7 +88,7 @@ class SpinDimer:
             
         return Hext
 
-# hard coded Hamiltonians and external fields (bad idea!)
+# hard-coded Hamiltonians and external fields (bad idea!)
 
 def VOporphirin(A, g, h):  
     S = 1/2
