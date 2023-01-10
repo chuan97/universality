@@ -18,7 +18,7 @@ def VOporphirin(A, g, h):
     HS += h[0]*g[0]*kron(Ieye, Sx) + h[1]*g[1]*kron(Ieye, Sy) + h[2]*g[2]*kron(Ieye, Sz)
     return HS
 
-def external_field(h_ext, g):
+def external_field_VOporphirin(h_ext, g):
     S = 1/2
     Sz, Sp, Sm, Seye = spin.spin_operators(S, to_dense_array=True, dtype=complex)
     Sx = 1/2 * (Sp + Sm)
@@ -28,6 +28,26 @@ def external_field(h_ext, g):
     Iz, Ip, Im, Ieye = spin.spin_operators(I, to_dense_array=True, dtype=complex)
     
     Hext = h_ext[0]*g[0]*kron(Ieye, Sx) + h_ext[1]*g[1]*kron(Ieye, Sy) + h_ext[2]*g[2]*kron(Ieye, Sz)
+    return Hext
+
+def GdW30(D1, E1, gmub, hx, hy, hz):
+    S = 7/2
+    Sz, Sp, Sm, Seye = spin.spin_operators(S, to_dense_array=True, dtype=complex)
+    Sx = 1/2 * (Sp + Sm)
+    Sy= -1j/2 * (Sp - Sm)
+    
+    HS = D1*Sz@Sz + E1*(Sx@Sx - Sy@Sy)
+    HS += -D1 * 1/3 * S*(S + 1) * Seye
+    HS += -gmub * (hx*Sx + hy*Sy + hz*Sz)
+    return HS
+
+def external_field_GdW30(θ, ϕ):
+    S = 7/2
+    Sz, Sp, Sm, Seye = spin.spin_operators(S, to_dense_array=True, dtype=complex)
+    Sx = 1/2 * (Sp + Sm)
+    Sy= -1j/2 * (Sp - Sm)
+    
+    Hext = -np.cos(θ)*Sz - np.sin(θ)*(np.cos(ϕ)*Sx + np.sin(ϕ)*Sy)
     return Hext
 
 class _VOporphirin:
