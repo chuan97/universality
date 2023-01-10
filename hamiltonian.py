@@ -3,6 +3,85 @@ from scipy.linalg import kron
 
 import spin
 
+# Classes for families of Hamiltonians (good idea!)
+    
+class SpinMonomer:
+    def __init__(self, S, g, h=None, A=None, shift=None):
+        self.S = S
+        self.g = g
+        self.h = h
+        self.A = A
+        self.shift = shift
+        
+        Sz, Sp, Sm, self.Seye = spin.spin_operators(self.S, to_dense_array=True, dtype=complex)
+        Sx = 1/2 * (Sp + Sm)
+        Sy = -1j/2 * (Sp - Sm)
+        self.Sarray = np.array([Sx, Sy, Sz])
+    
+    @property
+    def H(self):
+        H = np.zeros(self.Seye.shape, dtype=complex)
+        
+        if self.h is not None:
+            H += self.external_field(self.h)
+        if self.A is not None:
+            H += np.sum(self.Sarray @ np.tensordot(self.A, self.Sarray, axes=[1, 0]), axis=0)
+        if self.shift:
+            H += self.shift * self.Seye
+            
+        return H
+        
+    def external_field(self, h_ext):
+        Hext = np.tensordot(h_ext, np.tensordot(self.g, self.Sarray, axes=[1, 0]), axes=[0, 0])
+        return Hext
+
+class SpinDimer:
+    def __init__(self, Ss, gs, J, hs=None, As=None, shift=None):
+        self.Ss = Ss
+        self.gs = gs
+        self.J = J
+        self.hs = hs
+        self.As = As
+        self.shift = shift
+        
+        self.Sarrays = []
+        self.Seyes = []
+        for i, S in enumerate(Ss):
+            Sz, Sp, Sm, Seye = spin.spin_operators(S, to_dense_array=True, dtype=complex)
+            Sx = 1/2 * (Sp + Sm)
+            Sy = -1j/2 * (Sp - Sm)
+            self.Sarrays.append(np.array([Sx, Sy, Sz]))
+            self.Seyes.append(Seye)
+            
+        self.Sarrays[0] = np.array([np.kron(comp, self.Seyes[1]) for comp in self.Sarrays[0]])
+        self.Sarrays[1] = np.array([np.kron(self.Seyes[0], comp) for comp in self.Sarrays[1]])
+        
+    @property
+    def H(self):
+        H = np.zeros(self.Sarrays[0][0].shape, dtype=complex)
+        
+        if self.hs is not None:
+            H += self.external_field(self.hs)
+        if self.J is not None:
+            H += np.sum(self.Sarrays[0] @ np.tensordot(self.J, self.Sarrays[1], axes=[1, 0]), axis=0)
+        if self.As is not None:
+            for A, Sarray in zip(self.As, self.Sarrays):
+                H += np.sum(Sarray @ np.tensordot(A, Sarray, axes=[1, 0]), axis=0)
+        if self.shift:
+            H += self.shift * self.Seye
+            
+        return H 
+    
+    def external_field(self, h_exts):
+        Hext = np.zeros(self.Sarrays[0][0].shape, dtype=complex)
+        
+        for h_ext, g, Sarray in zip(h_exts, self.gs, self.Sarrays):
+            Hext += np.tensordot(h_ext, np.tensordot(g, Sarray, axes=[1, 0]), axes=[0, 0])
+            
+        return Hext
+
+# hard coded Hamiltonians and external fields (bad idea!)
+
 def VOporphirin(A, g, h):  
     S = 1/2
     Sz, Sp, Sm, Seye = spin.spin_operators(S, to_dense_array=True, dtype=complex)
@@ -49,109 +128,3 @@ def external_field_GdW30(θ, ϕ):
     
     Hext = -np.cos(θ)*Sz - np.sin(θ)*(np.cos(ϕ)*Sx + np.sin(ϕ)*Sy)
     return Hext
-
-class _VOporphirin:
-    def __init__(self, A, g, h, S, I):
-        self.A = A
-        self.g = g
-        self.h = h
-        self.S = S
-        self.I = I
-        
-        Sz, Sp, Sm, self.Seye = spin.spin_operators(self.S, to_dense_array=True, dtype=complex)
-        Sx = 1/2 * (Sp + Sm)
-        Sy= -1j/2 * (Sp - Sm)
-        
-        Iz, Ip, Im, self.Ieye = spin.spin_operators(self.I, to_dense_array=True, dtype=complex)
-        Ix = 1/2 * (Ip + Im)
-        Iy= -1j/2 * (Ip - Im)
-        
-        self.Sarray = np.array([kron(self.Ieye, Sx), kron(self.Ieye, Sy), kron(self.Ieye, Sz)])
-        self.Iarray = np.array([kron(Ix, self.Seye), kron(Iy, self.Seye), kron(Iz, self.Seye)])
-        
-    @property
-    def H(self):
-        HS = np.sum(self.Iarray @ np.tensordot(self.A, self.Sarray, axes=[1, 0]), axis=0)
-        HS += self.external_field(self.h)
-        return HS
-    
-    def external_field(self, h_ext):
-        Hext = np.tensordot(h_ext, np.tensordot(self.g, self.Sarray, axes=[1, 0]), axes=[0, 0])
-        return Hext
-    
-class SpinMonomer:
-    def __init__(self, S, g, h=None, A=None, shift=None):
-        self.S = S
-        self.g = g
-        self.h = h
-        self.A = A
-        self.shift = shift
-        
-        Sz, Sp, Sm, self.Seye = spin.spin_operators(self.S, to_dense_array=True, dtype=complex)
-        Sx = 1/2 * (Sp + Sm)
-        Sy= -1j/2 * (Sp - Sm)
-        self.Sarray = np.array([Sx, Sy, Sz])
-    
-    @property
-    def H(self):
-        H = np.zeros(self.Seye.shape, dtype=complex)
-        
-        if self.h is not None:
-            H += self.external_field(self.h)
-        if self.A is not None:
-            H += np.sum(self.Sarray @ np.tensordot(self.A, self.Sarray, axes=[1, 0]), axis=0)
-        if self.shift:
-            H += self.shift * self.Seye
-            
-        return H
-        
-    def external_field(self, h_ext):
-        Hext = np.tensordot(h_ext, np.tensordot(self.g, self.Sarray, axes=[1, 0]), axes=[0, 0])
-        return Hext
-    
-class SpinDimer:
-    def __init__(self, Ss, gs, J, hs=None, As=None, shift=None):
-        self.Ss = Ss
-        self.gs = gs
-        self.J = J
-        self.hs = hs
-        self.As = As
-        self.shift = shift
-        
-        
-        for i, S in enumerate(Ss):
-            Sz, Sp, Sm, Seye = spin.spin_operators(self.S, to_dense_array=True, dtype=complex)
-            Sx = 1/2 * (Sp + Sm)
-            Sy= -1j/2 * (Sp - Sm)
-            self.Sarrays.append(np.array([Sx, Sy, Sz]))
-            self.Seyes.append(Seye)
-            
-        self.Sarrays[0] = np.array([np.kron(comp, self.Seyes[1]) for comp in self.Sarrays[0]])
-        self.Sarrays[1] = np.array([np.kron(self.Seyes[0], comp) for comp in self.Sarrays[1]])
-        
-    @property
-    def H(self):
-        H = np.zeros(self.Sarrays[0][0].shape, dtype=complex)
-        
-        if self.hs is not None:
-            H += self.external_field(self.hs)
-        if self.J is not None:
-            H += np.sum(self.Sarrays[0] @ np.tensordot(self.J, self.Sarrays[1], axes=[1, 0]), axis=0)
-        if self.As is not None:
-            for A, Sarray in zip(self.As, self.Sarrays):
-                H += np.sum(self.Sarray @ np.tensordot(self.A, self.Sarray, axes=[1, 0]), axis=0)
-        if self.shift:
-            H += self.shift * self.Seye
-            
-        return H 
-    
-    def external_field(self, h_exts):
-        Hext = np.zeros(self.Sarrays[0][0].shape, dtype=complex)
-        
-        for h_ext, g, Sarray in zip(h_exts, self.gs, self.Sarrays):
-            Hext += np.tensordot(h_ext, np.tensordot(self.g, Sarray, axes=[1, 0]), axes=[0, 0])
-            
-        return Hext
-       
-       
-    
